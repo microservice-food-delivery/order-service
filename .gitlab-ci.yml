@@ -1,0 +1,17 @@
+# .gitlab-ci.yml
+stages:
+  - build
+
+# Build stage
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind  # Docker-in-Docker เพื่อให้สามารถใช้งาน Docker ภายใน CI/CD pipeline ได้
+  before_script:
+    - docker login -u "$username" -p "$password"
+    - docker buildx create --use  # สร้าง buildx builder instance และใช้มัน
+  script:
+    - docker buildx build --platform linux/amd64 -t $username/order-service:1.0 --push .  # สร้าง image จาก Dockerfile ใน repo
+  only:
+    - develop  # ทำงานเมื่อ push บน branch 'develop'
