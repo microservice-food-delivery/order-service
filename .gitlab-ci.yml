@@ -11,8 +11,7 @@ build:
   services:
     - docker:dind  # Docker-in-Docker เพื่อให้สามารถใช้งาน Docker ภายใน CI/CD pipeline ได้
   before_script:
-    - docker --version
-    - docker info
+    - echo $DOCKERHUB_PASSWORD $DOCKERHUB_USERNAME
     - echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
     - docker buildx create --use  # สร้าง buildx builder instance และใช้มัน
   script:
