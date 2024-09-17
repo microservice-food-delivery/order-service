@@ -18,9 +18,6 @@ data class Order(
     @Column(name = "customer_name")
     var customerName: String? = null,
 
-//    @Column(name = "food_id")
-//    var foodId: Long? = null,
-//
     @Column(name = "order_date")
     @CreationTimestamp
     var orderDate: Date? = null,
