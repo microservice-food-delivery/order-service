@@ -3,6 +3,8 @@ stages:
 
 variables:
   CI_REGISTRY: "docker.io"  # Docker Hub registry
+  DOCKER_COMPOSE_PATH: "microservice/docker-compose.yml"  # Path ของ docker-compose ใน EC2
+
 
 # Build stage
 build:
@@ -14,6 +16,23 @@ build:
     - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
     - docker buildx create --use  # สร้าง buildx builder instance และใช้มัน
   script:
-    - docker buildx build --platform linux/amd64 -t $DOCKERHUB_USERNAME/order-service:1.0 --push .  # สร้าง image และ push
+    - echo "Build iamges..."
+    # - docker buildx build --platform linux/amd64 -t $DOCKERHUB_USERNAME/order-service:1.0 --push .  # สร้าง image และ push
+  only:
+    - develop  # ทำงานเมื่อ push บน branch 'develop'
+
+# Deploy stage
+deploy:
+  stage: deploy
+  image: alpine:latest  # ใช้ Alpine image เพื่อทำให้เบากว่า
+  before_script:
+    # ตั้งค่า SSH key เพื่อใช้เข้าถึง EC2
+    - apk add --no-cache openssh
+    - mkdir -p ~/.ssh
+    - echo "$EC2_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa  # เพิ่ม private key จาก GitLab CI/CD variable
+    - chmod 600 ~/.ssh/id_rsa  # เปลี่ยน permission ของ SSH key เพื่อให้ปลอดภัย
+  script:
+    # คำสั่ง SSH เพื่อเข้าสู่ EC2 และใช้ docker-compose deploy service
+    - ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "cd /home/ubuntu/microservice && sudo docker compose pull && sudo docker compose down && sudo docker compose up --build -d"
   only:
     - develop  # ทำงานเมื่อ push บน branch 'develop'
