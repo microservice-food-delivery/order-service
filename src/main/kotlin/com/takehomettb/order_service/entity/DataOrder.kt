@@ -2,6 +2,7 @@ package com.takehomettb.order_service.entity
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.util.Objects
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -32,14 +33,23 @@ data class Item(
 )
 
 data class OrderRequest(
-    val customerName: String,
-    val orderItems: List<Item>,
+    val customerId: Int? = null,
+    val orderItems: List<Item> = emptyList(),
 )
 
 data class FoodResponse(
     val foodId: Int,
     val name: String,
     val price: BigDecimal,
+)
+
+data class CustomerResponse(
+    val customerId: Int? = null,
+    val name: String,
+    val address: String,
+    val phone: String,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime,
 )
 
 data class StatusOrder(

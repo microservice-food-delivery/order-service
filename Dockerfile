@@ -24,11 +24,9 @@ WORKDIR /app
 # Step 7: คัดลอก jar file จากขั้นตอน build ไปยัง runtime image
 COPY --from=build /app/build/libs/*.jar /app/order-service.jar
 
-EXPOSE 9001
+EXPOSE 8083
 
 # Step 8: กำหนดค่า entrypoint เพื่อรัน Spring Boot application
-# ENTRYPOINT ["java", "-jar", "/app/discovery-service.jar"]
-# ENTRYPOINT ["sh", "-c", "until curl -s http://config-server:9002/actuator/health | grep 'UP'; do sleep 5; done; exec java -jar /app/discovery-service.jar"]
 ENTRYPOINT [ "sh", "-c", "echo 'Waiting for discovery-service to start'; \
   until curl -s http://discovery-service:9001/actuator/health | grep 'UP'; do \
     echo 'waiting for discovery-service to be available......'; \

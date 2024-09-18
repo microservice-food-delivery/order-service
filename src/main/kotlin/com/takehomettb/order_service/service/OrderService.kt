@@ -9,12 +9,14 @@ import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.util.*
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.time.times
 
 @Service
 class OrderService {
     @Autowired lateinit var orderItemRepository: OrderItemRepository
     @Autowired lateinit var inventoryServiceClient: InventoryServiceClient
+    @Autowired lateinit var customerServiceClient: CustomerServiceClient
     @Autowired lateinit var orderRepository: OrderRepository
 
     var response = ReturnStatus()
@@ -26,16 +28,22 @@ class OrderService {
     fun getAllOrders(): List<ListOrder> {
         var listOrder: MutableList<ListOrder> = mutableListOf()
 
-        val result = orderRepository.findAll()
-        for (item in result) {
-            var order = ListOrder()
-            order.orderId = item.orderId
-            order.customerName = item.customerName
-            order.orderDate = item.orderDate.toString()
-            order.orderItems = getFoodName(item.orderId!!)
-            order.totalAmount = item.totalAmount
-            order.orderStatus = item.orderStatus
-            listOrder.add(order)
+        try {
+            val result = orderRepository.findAll()
+            for (item in result) {
+                var order = ListOrder()
+                order.orderId = item.orderId
+                val customer = customerServiceClient.getCustomerById(item.customerId!!)
+                order.customerName = customer.name
+                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                order.orderDate = item.createdAt!!.format(formatter)
+                order.orderItems = getFoodName(item.orderId!!)
+                order.totalAmount = item.totalAmount
+                order.orderStatus = item.orderStatus
+                listOrder.add(order)
+            }
+        }catch (e: Exception) {
+            println(e.message)
         }
         return listOrder
     }
@@ -45,8 +53,10 @@ class OrderService {
         val order = ListOrder()
         if (result != null) {
             order.orderId = result.orderId
-            order.customerName = result.customerName
-            order.orderDate = result.orderDate.toString()
+            val customer = customerServiceClient.getCustomerById(result.customerId!!)
+            order.customerName = customer.name
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            order.orderDate = result.createdAt!!.format(formatter)
             order.orderItems = getFoodName(result.orderId!!)
             order.totalAmount = result.totalAmount
             order.orderStatus = result.orderStatus
@@ -75,7 +85,21 @@ class OrderService {
     // สร้างรายการคำสั่งซื้อใน table food_order
     fun createOrder(orderRequest: OrderRequest): ReturnStatus {
         val order = Order()
-        order.customerName = orderRequest.customerName
+
+        if (orderRequest.customerId == null) {
+            return ReturnStatus(
+                status = false,
+                message = "กรุณากรอกหมายเลขผู้ใช้",
+            )
+        }
+        if(orderRequest.orderItems.isEmpty()){
+            return ReturnStatus(
+                status = false,
+                message = "กรุณากรอกรายการอาหาร",
+            )
+        }
+
+        order.customerId = orderRequest.customerId
         order.orderStatus = "waiting"
         order.totalAmount = 0.toBigDecimal()
         val orderCount = orderRequest.orderItems.size
@@ -100,7 +124,7 @@ class OrderService {
                 createOrderItem(orderRequest, saveOrder.orderId!!)
             }
             response.status = true
-            response.data = order
+            response.data = saveOrder
             response.message = "บันทึกคำสั่งซื้อเสร็จสิ้น"
             return response
         }catch (ex: Exception){
@@ -141,16 +165,19 @@ class OrderService {
             )
         }
         if(data.status in listOf("waiting","confirm", "cooking","delivering","completed","cancel")){
-            var message = ""
+            // message ค่าเริ่มต้น
+            var message = "เปลี่ยนสถานะเรียบร้อย"
             if (data.status == "cancel") { //เช็คสถานะห้าม cancel ขณะอยู่สถานะอื่นๆที่ไม่ใช่ waiting
                 if(result.orderStatus == "waiting") {
                     result.orderStatus = "cancel"
                 }else{
-                    message = "ไม่สามารถ cancel หมายเลข Order นี้ได้เพราะอยู่ในสถานะ ${result.orderStatus} แล้ว"
+                    return ReturnStatus(
+                        status = false,
+                        data = getOrderById(orderId),
+                        message = "ไม่สามารถ cancel หมายเลข Order นี้ได้เพราะอยู่ในสถานะ ${result.orderStatus} แล้ว"
+                    )
                 }
             } else {
-                // message ค่าเริ่มต้น
-                message = "เปลี่ยนสถานะเรียบร้อย"
                 // อัปเดตสถานะของ order ตามเงื่อนไขที่กำหนด
                 when {
                     data.status == "confirm" && result.orderStatus == "waiting" -> {
@@ -179,6 +206,7 @@ class OrderService {
                     }
                 }
             }
+            result.updatedAt = LocalDateTime.now()
             orderRepository.save(result)
             return ReturnStatus(
                 status = true,

@@ -19,26 +19,26 @@ class OrderController {
     lateinit var orderService: OrderService
 
 
-    @GetMapping("/getOrder")
+    @GetMapping("/check")
     fun order(): ResponseEntity<Any> {
         return ResponseEntity.ok().body("Order")
     }
 
-    @GetMapping("/getOrders")
+    @GetMapping("/get")
     fun getOrder(): ResponseEntity<Any> {
         return ResponseEntity.ok().body(orderService.getAll())
     }
 
-    @GetMapping("/get")
+    @GetMapping("/getOrders")
     fun getAllOrder(): ResponseEntity<Any> {
         return ResponseEntity.ok().body(orderService.getAllOrders())
     }
-    @GetMapping("/get/{orderId}")
+    @GetMapping("/getOrder/{orderId}")
     fun getOrderByOrderId(@PathVariable orderId: Int): ResponseEntity<Any> {
         return ResponseEntity.ok().body(orderService.getOrderById(orderId))
     }
 
-    @PostMapping("/order")
+    @PostMapping("/createOrder")
     fun createFood(@RequestBody orderRequest: OrderRequest): ResponseEntity<Any> {
         return ResponseEntity.ok().body(orderService.createOrder(orderRequest))
     }
